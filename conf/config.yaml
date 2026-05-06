@@ -1,0 +1,13 @@
+defaults:
+  - experiment: alps_1d_2gmm
+  - _self_
+
+seed: 40
+device: auto
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false

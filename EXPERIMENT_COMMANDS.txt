@@ -1,0 +1,167 @@
+Experiment command reference
+============================
+
+Run all commands from the repo root:
+
+  cd /Users/dilumfernando/projects/NETs
+
+Common environment prefix:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8
+
+Python executable:
+
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python
+
+
+Single ALDP ALPS training
+-------------------------
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_aldp
+
+
+Single ALDP ALPS eval
+---------------------
+
+NETS sampler:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_eval.py \
+    experiment=alps_aldp \
+    eval.checkpoint_name=final \
+    eval.sampler=nets
+
+AIS sampler:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_eval.py \
+    experiment=alps_aldp \
+    eval.checkpoint_name=final \
+    eval.sampler=ais
+
+
+ALDP TICA plot
+--------------
+
+Run eval first, then:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_aldp_tica.py \
+    experiment=alps_aldp \
+    eval.checkpoint_name=final \
+    eval.sampler=nets
+
+
+ALDP ALPS multi-seed
+--------------------
+
+Default ALDP multi-seed run:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_alps_aldp_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais
+
+Current small-dt / sharp-prior ALDP settings:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_alps_aldp_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais \
+    --epsilon 1.0 \
+    --K 100000 \
+    --beta-max 100
+
+Same, with TICA plots:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_alps_aldp_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais \
+    --epsilon 1.0 \
+    --K 100000 \
+    --beta-max 100 \
+    --make-tica
+
+
+GMM ALPS multi-seed
+-------------------
+
+16d 2-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_alps_16d_2gmm_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais
+
+32d 2-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_alps_32d_2gmm_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais
+
+16d 2-GMM linear/fixed baseline:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Testing/run_linear_16d_2gmm_multiseed.py \
+    --seeds 40 41 42 \
+    --samplers nets ais
+
+
+Single GMM training examples
+----------------------------
+
+1d 2-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_1d_2gmm
+
+2d 2-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_2d_2gmm
+
+2d 4-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_2d_4gmm
+
+16d 2-GMM identity 4x ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_16d_2gmm_identity_4x
+
+32d 2-GMM ALPS:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_32d_2gmm
+
+
+Useful smoke checks
+-------------------
+
+ALDP config-only training initialization:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_aldp \
+    training.steps=0 \
+    training.n_walkers=8 \
+    data.true_sample_count=8
+
+Tiny ALDP one-step training run:
+
+  MPLCONFIGDIR=/tmp/mplconfig XDG_CACHE_HOME=/tmp MPLBACKEND=Agg LOKY_MAX_CPU_COUNT=8 \
+  /opt/homebrew/anaconda3/envs/pita-aldp/bin/python Training/run_training.py \
+    experiment=alps_aldp \
+    training.steps=1 \
+    training.n_walkers=16 \
+    data.true_sample_count=16

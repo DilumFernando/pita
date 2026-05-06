@@ -1,0 +1,31 @@
+training:
+  n_walkers: 2000
+  steps: 100
+  epsilon: 4.0
+  K: 50
+  modal_loss_weight: 0.0
+  modal_loss_end_fraction: 0.6
+  loss_type: manual
+
+data:
+  dim: 2
+  num_components: 4
+  covs: null
+  weights: [0.25, 0.25, 0.25, 0.25]
+  means_source: null
+  apply_mean_layout: true
+  mean_layout: circle
+  layout_scale: 12.0
+  perturb_mean: 10.0
+  true_sample_count: 2000
+  covariance:
+    style: scaled_identity
+    scales: [1.0, 1.0, 3.0, 3.0]
+    diagonal_scales: null
+    base_covariances: null
+    random_rotation_per_component: true
+
+model:
+  interpolation_kind: alps
+  perturbation: 0.0
+  use_time_logits: false
