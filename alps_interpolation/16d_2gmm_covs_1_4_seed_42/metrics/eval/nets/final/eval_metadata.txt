@@ -1,0 +1,11 @@
+sampler: nets
+checkpoint_name: final
+interpolation_kind: alps
+dim: 16
+num_components: 2
+num_samples: 512
+true_sample_count: 512
+dt: 0.02
+steps: 100
+epsilon: 1.0
+trajectory_length: 102

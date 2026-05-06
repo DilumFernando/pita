@@ -1,0 +1,91 @@
+{
+  "mode_centers_deg": {
+    "alpha_R": [
+      -75.0,
+      -30.0
+    ],
+    "beta": [
+      -75.0,
+      150.0
+    ],
+    "C5": [
+      -140.0,
+      170.0
+    ],
+    "alpha_p": [
+      -130.0,
+      -10.0
+    ],
+    "alpha_L": [
+      60.0,
+      10.0
+    ],
+    "alpha_D": [
+      60.0,
+      180.0
+    ]
+  },
+  "cartesian_space": "normalized 66D coordinates used by AlanineDipeptideTarget",
+  "covariance_66d": "0.01 * I_66",
+  "samples_per_mode": 2500,
+  "total_samples": 15000,
+  "valid_phi_psi_samples": 15000,
+  "seed": 42,
+  "summary": [
+    {
+      "mode": 0,
+      "name": "alpha_R",
+      "canonical_center_phi_deg": -75.0,
+      "canonical_center_psi_deg": -30.0,
+      "medoid_phi_deg": -74.98164367675781,
+      "medoid_psi_deg": -30.203210830688477,
+      "valid_projected_samples": 2500
+    },
+    {
+      "mode": 1,
+      "name": "beta",
+      "canonical_center_phi_deg": -75.0,
+      "canonical_center_psi_deg": 150.0,
+      "medoid_phi_deg": -74.89208984375,
+      "medoid_psi_deg": 149.90597534179688,
+      "valid_projected_samples": 2500
+    },
+    {
+      "mode": 2,
+      "name": "C5",
+      "canonical_center_phi_deg": -140.0,
+      "canonical_center_psi_deg": 170.0,
+      "medoid_phi_deg": -140.2342987060547,
+      "medoid_psi_deg": 170.0013885498047,
+      "valid_projected_samples": 2500
+    },
+    {
+      "mode": 3,
+      "name": "alpha_p",
+      "canonical_center_phi_deg": -130.0,
+      "canonical_center_psi_deg": -10.0,
+      "medoid_phi_deg": -130.2144012451172,
+      "medoid_psi_deg": -10.590677261352539,
+      "valid_projected_samples": 2500
+    },
+    {
+      "mode": 4,
+      "name": "alpha_L",
+      "canonical_center_phi_deg": 60.0,
+      "canonical_center_psi_deg": 10.0,
+      "medoid_phi_deg": 58.880126953125,
+      "medoid_psi_deg": 11.24287223815918,
+      "valid_projected_samples": 2500
+    },
+    {
+      "mode": 5,
+      "name": "alpha_D",
+      "canonical_center_phi_deg": 60.0,
+      "canonical_center_psi_deg": 180.0,
+      "medoid_phi_deg": 59.574546813964844,
+      "medoid_psi_deg": -179.951171875,
+      "valid_projected_samples": 2500
+    }
+  ],
+  "plot_note": "X markers are phi/psi of selected 66D medoid conformations; circles are the requested canonical angle centers."
+}

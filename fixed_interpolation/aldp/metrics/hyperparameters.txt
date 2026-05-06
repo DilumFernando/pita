@@ -1,0 +1,11 @@
+dim: 66
+num_components: 0
+n_walkers: 512
+steps: 100
+epsilon: 1.0
+K: 50
+delta_t: 0.02
+interpolation: fixed
+modal_loss_weight: 0.0
+loss_type: manual
+modal_loss_end_fraction: 0.0
