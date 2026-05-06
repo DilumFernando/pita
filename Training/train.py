@@ -91,7 +91,7 @@ def _hyperparameter_summary(
     modal_loss_weight,
     loss_type,
     modal_loss_end_fraction,
-    drift_net=None,
+    energy_model=None,
 ):
     return {
         "dim": dim,
@@ -105,7 +105,7 @@ def _hyperparameter_summary(
         "modal_loss_weight": modal_loss_weight,
         "loss_type": loss_type,
         "modal_loss_end_fraction": modal_loss_end_fraction,
-        "drift_architecture": drift_net.__class__.__name__ if drift_net is not None else "DriftNet",
+        "beta_max_learnable": _energy_model_beta_max_learnable(energy_model),
     }
 
 
@@ -144,6 +144,18 @@ def _energy_model_beta_max(energy_model):
     if energy_model is None or not hasattr(energy_model, "beta_max"):
         return float("nan")
     return float(energy_model.beta_max.detach().item())
+
+
+def _energy_model_beta_max_learnable(energy_model):
+    if energy_model is None:
+        return False
+    return bool(getattr(energy_model, "beta_max_learnable", True))
+
+
+def _trainable_parameters(module):
+    if module is None:
+        return []
+    return [param for param in module.parameters() if param.requires_grad]
 
 
 def _effective_modal_loss_weight(
@@ -490,11 +502,10 @@ def _configure_models_and_optimizer(
     U_net,
     energy_model,
     num_components,
-    drift_net=None,
 ):
     del num_components
 
-    drift_net = drift_net.to(device) if drift_net is not None else DriftNet(dim).to(device)
+    drift_net = DriftNet(dim).to(device)
     F_net = FreeEnergyNet(dim).to(device)
     potential_net = U_net.to(device) if U_net is not None else None
     energy_model = energy_model.to(device) if energy_model is not None else None
@@ -517,16 +528,18 @@ def _configure_models_and_optimizer(
             potential_net = PotentialNet(dim).to(device)
         if energy_model is None:
             raise ValueError("ALPS interpolation requires an energy_model with learnable parameters.")
+        energy_model_params = _trainable_parameters(energy_model)
         optimizer = torch.optim.Adam(
             [
                 {"params": drift_net.parameters(), "lr": lr},
                 {"params": F_net.parameters(), "lr": lr},
                 {"params": potential_net.parameters(), "lr": lr},
-                {"params": energy_model.parameters(), "lr": lr},
+                {"params": energy_model_params, "lr": lr},
             ]
         )
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
-        print("using the alps interpolation")
+        beta_max_status = "learnable" if _energy_model_beta_max_learnable(energy_model) else "fixed"
+        print(f"using the alps interpolation with {beta_max_status} beta_max")
     else:
         optimizer = torch.optim.Adam(list(drift_net.parameters()) + list(F_net.parameters()), lr=1e-4)
         print("using the fixed interpolation")
@@ -743,7 +756,6 @@ def train_and_save(
     true_samples=None,
     interpolation_kind=None,
     run_name=None,
-    drift_net=None,
 ):
     interpolation_kind = _resolve_interpolation_kind(interpolation_kind, means, modes, U_net)
     dirs = _initialize_run_dirs(interpolation_kind, dim, num_components, run_name=run_name)
@@ -754,7 +766,6 @@ def train_and_save(
         U_net=U_net,
         energy_model=energy_model,
         num_components=num_components,
-        drift_net=drift_net,
     )
 
     hyperparams = _hyperparameter_summary(
@@ -768,7 +779,7 @@ def train_and_save(
         modal_loss_weight,
         loss_type,
         modal_loss_end_fraction,
-        drift_net,
+        energy_model,
     )
     logging_paths = _initialize_logging(dirs["metrics"], num_components, hyperparams)
     metrics_history = []

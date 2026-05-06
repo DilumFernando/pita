@@ -191,7 +191,13 @@ class LearnableGMM(nn.Module):
         return LearnableGMM(self.means, self.covs, self.weights, self.beta)
 
 class GMMModesEnergy(nn.Module):
-    def __init__(self, modes: torch.Tensor, beta_max: torch.Tensor, init_logits: torch.Tensor | None = None):
+    def __init__(
+        self,
+        modes: torch.Tensor,
+        beta_max: torch.Tensor,
+        init_logits: torch.Tensor | None = None,
+        beta_max_learnable: bool = True,
+    ):
         """
         modes: [C, D] (fixed component means; you can also make them learnable if you want)
         init_logits: [C] optional initialization for mixture logits
@@ -203,8 +209,13 @@ class GMMModesEnergy(nn.Module):
             init_logits = torch.zeros(C, device=modes.device, dtype=modes.dtype)
         # self.logits = nn.Parameter(init_logits)  # learnable mixture weights (via softmax)
         self.register_buffer("logits", init_logits)
+        self.beta_max_learnable = bool(beta_max_learnable)
         beta_max = torch.as_tensor(beta_max, device=modes.device, dtype=modes.dtype)
-        self.beta_max_unconstrained = nn.Parameter(_inverse_softplus(beta_max))
+        beta_max_unconstrained = _inverse_softplus(beta_max)
+        if self.beta_max_learnable:
+            self.beta_max_unconstrained = nn.Parameter(beta_max_unconstrained)
+        else:
+            self.register_buffer("beta_max_unconstrained", beta_max_unconstrained)
 
     @property
     def beta_max(self) -> torch.Tensor:
@@ -240,12 +251,23 @@ class GMMModesEnergy(nn.Module):
         return Ut
 
 class GMMModesEnergyTimeLogits(nn.Module):
-    def __init__(self, modes: torch.Tensor, beta_max: float | torch.Tensor, logits_net: nn.Module):
+    def __init__(
+        self,
+        modes: torch.Tensor,
+        beta_max: float | torch.Tensor,
+        logits_net: nn.Module,
+        beta_max_learnable: bool = True,
+    ):
         super().__init__()
         self.register_buffer("modes", modes)   # [C, D]
         self.logits_net = logits_net           # [N, C] if t is [N]
+        self.beta_max_learnable = bool(beta_max_learnable)
         beta_max = torch.as_tensor(beta_max, device=modes.device, dtype=modes.dtype)
-        self.beta_max_unconstrained = nn.Parameter(_inverse_softplus(beta_max))
+        beta_max_unconstrained = _inverse_softplus(beta_max)
+        if self.beta_max_learnable:
+            self.beta_max_unconstrained = nn.Parameter(beta_max_unconstrained)
+        else:
+            self.register_buffer("beta_max_unconstrained", beta_max_unconstrained)
 
     @property
     def beta_max(self) -> torch.Tensor:

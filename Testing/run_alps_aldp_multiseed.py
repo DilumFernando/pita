@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from Energies.targets import create_target_from_config
 from Testing.run_eval import run_evaluation, save_projection_scatter_plots
-from Training.run_training import _build_drift_model, _build_mixture, _build_training_state, _resolve_device
+from Training.run_training import _build_mixture, _build_training_state, _resolve_device
 from Training.train import train_and_save
 from Utils.aldp_tica import plot_tica_comparison
 
@@ -51,6 +51,20 @@ def _parse_args():
     parser.add_argument("--epsilon", type=float, default=10.0)
     parser.add_argument("--K", type=int, default=1000)
     parser.add_argument("--beta-max", type=float, default=1.0)
+    beta_max_group = parser.add_mutually_exclusive_group()
+    beta_max_group.add_argument(
+        "--beta-max-learnable",
+        dest="beta_max_learnable",
+        action="store_true",
+        help="Train beta_max as a learnable ALPS energy parameter.",
+    )
+    beta_max_group.add_argument(
+        "--fixed-beta-max",
+        dest="beta_max_learnable",
+        action="store_false",
+        help="Keep beta_max fixed at --beta-max during training.",
+    )
+    parser.set_defaults(beta_max_learnable=True)
     parser.add_argument("--modal-loss-weight", type=float, default=0.0)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.0)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])
@@ -131,16 +145,9 @@ def _base_config(args):
             "model": {
                 "interpolation_kind": "alps",
                 "beta_max": float(args.beta_max),
+                "beta_max_learnable": bool(args.beta_max_learnable),
                 "perturbation": 0.0,
                 "use_time_logits": False,
-                "drift": {
-                    "architecture": "dit",
-                    "hidden_size": 192,
-                    "cond_dim": 64,
-                    "n_blocks": 6,
-                    "n_heads": 6,
-                    "dropout": 0.1,
-                },
             },
             "eval": {
                 "sampler": "nets",
@@ -164,7 +171,6 @@ def _train_once(cfg):
     if target is None:
         target = _build_mixture(cfg, device)
     state = _build_training_state(cfg, target, device)
-    drift_net = _build_drift_model(cfg, device)
 
     train_and_save(
         dim=cfg.data.dim,
@@ -188,7 +194,6 @@ def _train_once(cfg):
         true_samples=state["true_samples"],
         interpolation_kind=cfg.model.interpolation_kind,
         run_name=str(cfg.data.get("run_name", "")) or None,
-        drift_net=drift_net,
     )
 
 
