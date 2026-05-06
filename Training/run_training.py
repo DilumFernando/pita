@@ -26,7 +26,7 @@ from Energies.gmm import (
     make_scaled_identity_covariances,
 )
 from Energies.targets import create_target_from_config, infer_mode_centers, sample_reference
-from Models.models import DiTDriftNet, LogitsNet, PotentialNet
+from Models.models import LogitsNet, PotentialNet
 from Samplers.sampling import prior_samples as sample_prior_from_modes
 from Training.train import train_and_save
 from Utils.constants import means_40
@@ -155,6 +155,7 @@ def _build_training_state(cfg, target, device):
         if true_modes is None:
             raise ValueError("ALPS interpolation requires target modes/means.")
         beta_max_init = float(cfg.model.get("beta_max_init", cfg.model.get("beta_max", 1.0)))
+        beta_max_learnable = bool(cfg.model.get("beta_max_learnable", True))
         beta_max = torch.tensor(beta_max_init, dtype=torch.float32, device=device)
         perturbation = float(cfg.model.perturbation)
         warm_starts = true_modes + perturbation * torch.randn(num_components, dim, device=device)
@@ -162,16 +163,29 @@ def _build_training_state(cfg, target, device):
 
         if cfg.model.use_time_logits:
             logits_net = LogitsNet(dim, num_components).to(device)
-            energy_model = GMMModesEnergyTimeLogits(warm_starts, beta_max, logits_net)
+            energy_model = GMMModesEnergyTimeLogits(
+                warm_starts,
+                beta_max,
+                logits_net,
+                beta_max_learnable=beta_max_learnable,
+            )
         else:
-            energy_model = GMMModesEnergy(warm_starts, beta_max, init_logits)
+            energy_model = GMMModesEnergy(
+                warm_starts,
+                beta_max,
+                init_logits,
+                beta_max_learnable=beta_max_learnable,
+            )
 
         init_covs = (1.0 / beta_max) * torch.ones(num_components, device=device)
         prior = LearnableGMM(means=warm_starts, covs=init_covs, logits=init_logits)
         prior_state = prior.distribution.sample(torch.Size((n_walkers,))).to(device).requires_grad_(True)
         modes = warm_starts
     elif interpolation_kind == "fixed":
-        if true_modes is not None:
+        prior_source = str(cfg.model.get("prior_source", "target_modes"))
+        if prior_source == "standard_gaussian":
+            prior_state = torch.randn(n_walkers, dim, device=device).requires_grad_(True)
+        elif true_modes is not None:
             prior_state = sample_prior_from_modes(true_modes, num_samples=n_walkers, device=device)
         else:
             prior_state = torch.randn(n_walkers, dim, device=device).requires_grad_(True)
@@ -193,32 +207,6 @@ def _build_training_state(cfg, target, device):
     }
 
 
-def _build_drift_model(cfg, device):
-    drift_cfg = cfg.model.get("drift", None)
-    if drift_cfg is None:
-        return None
-
-    architecture = str(drift_cfg.get("architecture", "mlp")).lower()
-    if architecture == "mlp":
-        return None
-    if architecture != "dit":
-        raise ValueError(f"Unsupported drift architecture: {architecture}")
-
-    if cfg.data.target != "aldp":
-        raise ValueError("DiT drift is currently configured for ALDP particle coordinates.")
-
-    return DiTDriftNet(
-        dim=int(cfg.data.dim),
-        n_particles=int(cfg.data.n_particles),
-        spatial_dim=int(cfg.data.spatial_dim),
-        hidden_size=int(drift_cfg.get("hidden_size", 192)),
-        cond_dim=int(drift_cfg.get("cond_dim", 64)),
-        n_heads=int(drift_cfg.get("n_heads", 6)),
-        n_blocks=int(drift_cfg.get("n_blocks", 6)),
-        dropout=float(drift_cfg.get("dropout", 0.1)),
-    ).to(device)
-
-
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
 def main(cfg):
     device = _resolve_device(cfg.device)
@@ -232,7 +220,6 @@ def main(cfg):
     if target is None:
         target = _build_mixture(cfg, device)
     state = _build_training_state(cfg, target, device)
-    drift_net = _build_drift_model(cfg, device)
 
     train_and_save(
         dim=cfg.data.dim,
@@ -256,7 +243,6 @@ def main(cfg):
         true_samples=state["true_samples"],
         interpolation_kind=cfg.model.interpolation_kind,
         run_name=str(cfg.data.get("run_name", "")) or None,
-        drift_net=drift_net,
     )
 
 

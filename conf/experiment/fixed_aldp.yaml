@@ -25,7 +25,7 @@ data:
   test_path: data/alanine/AL22_temp_300.00/test_split_AL22-10000.npy
   pdb_path: data/pdbs/A_capped.pdb
   mode_centers_path: null
-  num_mode_centers: 4
+  num_mode_centers: 6
   mode_estimation_samples: 10000
   mode_strategy: canonical_rama
   energy_batch_size: 1024
@@ -35,13 +35,7 @@ data:
 
 model:
   interpolation_kind: fixed
+  prior_source: standard_gaussian
   beta_max: 1.0
   perturbation: 0.0
   use_time_logits: false
-  drift:
-    architecture: dit
-    hidden_size: 192
-    cond_dim: 64
-    n_blocks: 6
-    n_heads: 6
-    dropout: 0.1

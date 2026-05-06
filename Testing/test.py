@@ -63,14 +63,13 @@ def load_model(
     interpolation_kind=None,
     checkpoint_name="final",
     run_name=None,
-    drift_net=None,
 ):
     del beta_max
 
     kind = _infer_interpolation_kind(interpolation_kind, means, U_net, modes)
     checkpoint_dir, dirs = _resolve_checkpoint_dir(kind, dim, num_components, checkpoint_name, run_name=run_name)
 
-    drift = drift_net.to(device) if drift_net is not None else DriftNet(dim).to(device)
+    drift = DriftNet(dim).to(device)
     free_energy = FreeEnergyNet(dim).to(device)
     potential_net = PotentialNet(dim).to(device)
     energy_model = None

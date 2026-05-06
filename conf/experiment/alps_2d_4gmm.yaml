@@ -27,5 +27,6 @@ data:
 
 model:
   interpolation_kind: alps
+  beta_max_learnable: true
   perturbation: 0.0
   use_time_logits: false
