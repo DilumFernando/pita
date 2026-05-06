@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.DS_Store
+/pita_nested_checkout_backup/
+/Presentation/
+/data/PITA Data/
 *.csv
 *.pt
 runner/wandb/
