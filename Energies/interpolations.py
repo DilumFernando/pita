@@ -3,7 +3,7 @@ import math
 import torch
 
 
-ENERGY_DERIVATIVE_CLIP = 1000.0
+ENERGY_DERIVATIVE_CLIP = 100.0
 
 
 def _clip_energy_derivative(value):

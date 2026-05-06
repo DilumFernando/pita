@@ -34,15 +34,9 @@ data:
 model:
   interpolation_kind: alps
   beta_max: 1.0
+  beta_max_learnable: true
   perturbation: 0.0
   use_time_logits: false
-  drift:
-    architecture: dit
-    hidden_size: 192
-    cond_dim: 64
-    n_blocks: 6
-    n_heads: 6
-    dropout: 0.1
 eval:
   sampler: nets
   checkpoint_name: final
