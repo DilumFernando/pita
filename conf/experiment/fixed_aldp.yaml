@@ -3,7 +3,7 @@
 training:
   n_walkers: 512
   steps: 100
-  epsilon: 0.01
+  epsilon: 5.0
   K: 50
   modal_loss_weight: 0.0
   modal_loss_end_fraction: 0.0
