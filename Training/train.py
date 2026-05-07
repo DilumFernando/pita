@@ -149,7 +149,7 @@ def _energy_model_beta_max(energy_model):
 def _energy_model_beta_max_learnable(energy_model):
     if energy_model is None:
         return False
-    return bool(getattr(energy_model, "beta_max_learnable", True))
+    return bool(getattr(energy_model, "beta_max_learnable", False))
 
 
 def _trainable_parameters(module):

@@ -64,7 +64,7 @@ def _parse_args():
         action="store_false",
         help="Keep beta_max fixed at --beta-max during training.",
     )
-    parser.set_defaults(beta_max_learnable=True)
+    parser.set_defaults(beta_max_learnable=False)
     parser.add_argument("--modal-loss-weight", type=float, default=0.0)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.0)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])

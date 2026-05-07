@@ -155,7 +155,7 @@ def _build_training_state(cfg, target, device):
         if true_modes is None:
             raise ValueError("ALPS interpolation requires target modes/means.")
         beta_max_init = float(cfg.model.get("beta_max_init", cfg.model.get("beta_max", 1.0)))
-        beta_max_learnable = bool(cfg.model.get("beta_max_learnable", True))
+        beta_max_learnable = bool(cfg.model.get("beta_max_learnable", False))
         beta_max = torch.tensor(beta_max_init, dtype=torch.float32, device=device)
         perturbation = float(cfg.model.perturbation)
         warm_starts = true_modes + perturbation * torch.randn(num_components, dim, device=device)

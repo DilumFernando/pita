@@ -196,7 +196,7 @@ class GMMModesEnergy(nn.Module):
         modes: torch.Tensor,
         beta_max: torch.Tensor,
         init_logits: torch.Tensor | None = None,
-        beta_max_learnable: bool = True,
+        beta_max_learnable: bool = False,
     ):
         """
         modes: [C, D] (fixed component means; you can also make them learnable if you want)
@@ -256,7 +256,7 @@ class GMMModesEnergyTimeLogits(nn.Module):
         modes: torch.Tensor,
         beta_max: float | torch.Tensor,
         logits_net: nn.Module,
-        beta_max_learnable: bool = True,
+        beta_max_learnable: bool = False,
     ):
         super().__init__()
         self.register_buffer("modes", modes)   # [C, D]
