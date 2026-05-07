@@ -30,7 +30,7 @@ data:
   energy_batch_size: 1024
   openmm_platform: CUDA
   device_index: 0
-  true_sample_count: 1000
+  true_sample_count: 512
 model:
   interpolation_kind: alps
   beta_max: 1.0
@@ -40,8 +40,8 @@ model:
 eval:
   sampler: nets
   checkpoint_name: final
-  num_samples: 1000
-  true_sample_count: 1000
+  num_samples: 512
+  true_sample_count: 512
   dt: 0.01
   steps: 100
   epsilon: 5.0
