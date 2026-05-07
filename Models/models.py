@@ -29,12 +29,6 @@ class DriftNet(nn.Module):
                 nn.Tanh(),
                 nn.Linear(512, 512),
                 nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
                 nn.Linear(512, dim)
             )
         
@@ -59,12 +53,6 @@ class FreeEnergyNet(nn.Module):
         else:
             self.net = nn.Sequential(
                 nn.Linear(1, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
                 nn.Tanh(),
                 nn.Linear(512, 512),
                 nn.Tanh(),
@@ -179,12 +167,6 @@ class PotentialNet(nn.Module):
         else:
             self.net = nn.Sequential(
                 nn.Linear(dim + 1, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
-                nn.Tanh(),
-                nn.Linear(512, 512),
                 nn.Tanh(),
                 nn.Linear(512, 512),
                 nn.Tanh(),
