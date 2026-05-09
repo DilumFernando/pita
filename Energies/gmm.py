@@ -171,6 +171,14 @@ class LearnableGMM(nn.Module):
     def weights(self):
         return torch.softmax(self.logits, dim=0)
 
+    @property
+    def component_distribution(self):
+        return D.MultivariateNormal(
+            loc=self.means,
+            covariance_matrix=self.covs,
+            validate_args=False,
+        )
+
     def log_density(self, x: Tensor) -> Tensor:
         """
         Args:
@@ -178,7 +186,15 @@ class LearnableGMM(nn.Module):
         Returns:
             log_density: (batch_size,)
         """
-        return self.beta * self.distribution.log_prob(x).view(-1, 1)
+        component_dist = self.component_distribution
+        component_log_probs = component_dist.log_prob(x[:, None, :])
+        mode_log_probs = component_dist.log_prob(self.means)
+        log_weights = torch.log_softmax(self.logits, dim=0)
+        log_density = torch.logsumexp(
+            log_weights[None, :] + component_log_probs - mode_log_probs[None, :],
+            dim=1,
+        )
+        return self.beta * log_density.view(-1, 1)
 
     def energy(self, x: Tensor) -> Tensor:
         return -self.log_density(x)
