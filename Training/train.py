@@ -326,6 +326,7 @@ def _train_path(
     modal_loss_end_fraction,
     K,
     loss_type,
+    backward_per_step=False,
 ):
     device = next(drift_net.parameters()).device
     delta_t = 1.0 / K
@@ -342,6 +343,7 @@ def _train_path(
 
     compute_ctds = loss_type == "ctds"
     manual_total_loss = torch.tensor(0.0, device=device)
+    did_backward = False
     final_mode_weights = None
     final_weights = torch.ones(n_walkers, device=device)
     final_modal_loss = torch.tensor(0.0, device=device)
@@ -386,7 +388,13 @@ def _train_path(
             path_ts.append(t_next)
             path_log_weights.append(A)
         combined_loss = loss + effective_modal_weight * modal_loss
-        manual_total_loss = manual_total_loss + delta_t * combined_loss
+        step_loss = delta_t * combined_loss
+        if backward_per_step and loss_type == "manual":
+            step_loss.backward()
+            did_backward = True
+            manual_total_loss = manual_total_loss + step_loss.detach()
+        else:
+            manual_total_loss = manual_total_loss + step_loss
 
         ess_value = ess_from_weights(weights)
         if float(ess_value.detach().item()) < ESS_RESAMPLE_THRESHOLD:
@@ -461,7 +469,7 @@ def _train_path(
     if final_mode_weights is not None:
         metrics.update(_mode_summary(final_mode_weights))
 
-    return optimize_loss, final_weights, x.detach(), metrics
+    return optimize_loss, final_weights, x.detach(), metrics, did_backward
 
 
 def train_step(
@@ -487,6 +495,7 @@ def train_step(
     modal_loss_weight=0.0,
     modal_loss_end_fraction=0.6,
     loss_type="manual",
+    backward_per_step=False,
 ):
     del T
     return _train_path(
@@ -511,6 +520,7 @@ def train_step(
         modal_loss_end_fraction=modal_loss_end_fraction,
         K=K,
         loss_type=loss_type,
+        backward_per_step=backward_per_step,
     )
 
 
@@ -858,7 +868,8 @@ def train_and_save(
     best_checkpoint_summary = {}
 
     for step in range(steps):
-        loss, weights, samples, step_metrics = train_step(
+        backward_per_step = model_type == "egnn" and loss_type == "manual"
+        loss, weights, samples, step_metrics, did_backward = train_step(
             drift_net=drift_net,
             F_net=F_net,
             U_net=U_net,
@@ -879,9 +890,11 @@ def train_and_save(
             prior_samples=prior_samples,
             true_modes=true_modes,
             true_samples=true_samples,
+            backward_per_step=backward_per_step,
         )
 
-        loss.backward()
+        if not did_backward:
+            loss.backward()
         step_metrics = _update_step_metrics(
             step_metrics,
             drift_net,
