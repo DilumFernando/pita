@@ -16,11 +16,42 @@ TRAIN_T_MAX = 1.0
 TRAIN_T_MIN = 0.05
 ESS_RESAMPLE_THRESHOLD = 0.3
 DRIFT_CLIP = 100.0
+EGNN_DIVERGENCE_BATCH_SIZE = 5
+FINITE_DIFF_DIVERGENCE_EPS = 1e-3
 
 
 def _clip_update_vector(value, clip=DRIFT_CLIP):
     value = torch.nan_to_num(value, nan=0.0, posinf=clip, neginf=-clip)
     return torch.clamp(value, min=-clip, max=clip)
+
+
+def _drift_and_divergence(drift_net, x, t, divergence_batch_size=None):
+    if divergence_batch_size is None or divergence_batch_size <= 0 or divergence_batch_size >= x.shape[0]:
+        b = _clip_update_vector(drift_net(x, t))
+        return b, divergence(b, x)
+
+    drift_chunks = []
+    div_chunks = []
+    for start in range(0, x.shape[0], divergence_batch_size):
+        stop = min(start + divergence_batch_size, x.shape[0])
+        x_chunk = x[start:stop]
+        t_chunk = t[start:stop]
+        b_chunk = _clip_update_vector(drift_net(x_chunk, t_chunk))
+        drift_chunks.append(b_chunk)
+        div_chunks.append(divergence(b_chunk, x_chunk))
+    return torch.cat(drift_chunks, dim=0), torch.cat(div_chunks, dim=0)
+
+
+def _drift_and_finite_difference_divergence(drift_net, x, t, eps=FINITE_DIFF_DIVERGENCE_EPS):
+    b = _clip_update_vector(drift_net(x, t))
+    noise = torch.randn_like(x)
+    x_plus = (x + eps * noise).detach()
+    x_minus = (x - eps * noise).detach()
+    b_plus = _clip_update_vector(drift_net(x_plus, t))
+    b_minus = _clip_update_vector(drift_net(x_minus, t))
+    div = ((b_plus - b_minus) * noise).sum(dim=1) / (2.0 * eps)
+    div = torch.nan_to_num(div, nan=0.0, posinf=DRIFT_CLIP, neginf=-DRIFT_CLIP)
+    return b, torch.clamp(div, min=-DRIFT_CLIP, max=DRIFT_CLIP)
 
 
 def interpolation_dir(kind, dim, num_components, run_name=None):
@@ -327,6 +358,8 @@ def _train_path(
     K,
     loss_type,
     backward_per_step=False,
+    divergence_batch_size=None,
+    finite_difference_divergence=False,
 ):
     device = next(drift_net.parameters()).device
     delta_t = 1.0 / K
@@ -353,9 +386,11 @@ def _train_path(
     path_log_weights = [] if compute_ctds else None
 
     while t_k.mean() <= current_T:
-        b = _clip_update_vector(drift_net(x, t_k))
+        if finite_difference_divergence:
+            b, div_b = _drift_and_finite_difference_divergence(drift_net, x, t_k)
+        else:
+            b, div_b = _drift_and_divergence(drift_net, x, t_k, divergence_batch_size)
         gradU = grad_U_t(x, t_k, means, U_net, modes, mixture, prior, energy_model)
-        div_b = divergence(b, x)
         dtU = partial_t_U(x, t_k, means, U_net, modes, mixture, prior, energy_model)
 
         noise = torch.randn_like(x)
@@ -366,9 +401,11 @@ def _train_path(
 
         x_det = x.detach().requires_grad_(True)
         t_det = t_k.detach().requires_grad_(True)
-        b_eval = _clip_update_vector(drift_net(x_det, t_det))
+        if finite_difference_divergence:
+            b_eval, div_b_eval = _drift_and_finite_difference_divergence(drift_net, x_det, t_det)
+        else:
+            b_eval, div_b_eval = _drift_and_divergence(drift_net, x_det, t_det, divergence_batch_size)
         gradU_eval = grad_U_t(x_det, t_det, means, U_net, modes, mixture, prior, energy_model)
-        div_b_eval = divergence(b_eval, x_det)
         dtU_eval = partial_t_U(x_det, t_det, means, U_net, modes, mixture, prior, energy_model)
         dF_dt = _clip_update_vector(torch.autograd.grad(F_net(t_det).sum(), t_det, create_graph=True)[0])
 
@@ -496,6 +533,8 @@ def train_step(
     modal_loss_end_fraction=0.6,
     loss_type="manual",
     backward_per_step=False,
+    divergence_batch_size=None,
+    finite_difference_divergence=False,
 ):
     del T
     return _train_path(
@@ -521,6 +560,8 @@ def train_step(
         K=K,
         loss_type=loss_type,
         backward_per_step=backward_per_step,
+        divergence_batch_size=divergence_batch_size,
+        finite_difference_divergence=finite_difference_divergence,
     )
 
 
@@ -869,6 +910,8 @@ def train_and_save(
 
     for step in range(steps):
         backward_per_step = model_type == "egnn" and loss_type == "manual"
+        divergence_batch_size = EGNN_DIVERGENCE_BATCH_SIZE if model_type == "egnn" else None
+        finite_difference_divergence = model_type == "egnn"
         loss, weights, samples, step_metrics, did_backward = train_step(
             drift_net=drift_net,
             F_net=F_net,
@@ -891,6 +934,8 @@ def train_and_save(
             true_modes=true_modes,
             true_samples=true_samples,
             backward_per_step=backward_per_step,
+            divergence_batch_size=divergence_batch_size,
+            finite_difference_divergence=finite_difference_divergence,
         )
 
         if not did_backward:

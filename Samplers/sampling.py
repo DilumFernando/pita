@@ -5,6 +5,42 @@ from Utils.metrics import ess_from_weights
 from Utils.plotting import plot_walkers
 from Training.train import resample_particles
 
+
+EGNN_DIVERGENCE_BATCH_SIZE = 5
+FINITE_DIFF_DIVERGENCE_EPS = 1e-3
+
+
+def _finite_difference_drift_and_divergence(drift, x, t_tensor, eps=FINITE_DIFF_DIVERGENCE_EPS):
+    b = drift(x, t_tensor)
+    noise = torch.randn_like(x)
+    x_plus = (x + eps * noise).detach().requires_grad_(True)
+    x_minus = (x - eps * noise).detach().requires_grad_(True)
+    b_plus = drift(x_plus, t_tensor)
+    b_minus = drift(x_minus, t_tensor)
+    div = ((b_plus - b_minus) * noise).sum(dim=1) / (2.0 * eps)
+    return b, torch.nan_to_num(div, nan=0.0, posinf=100.0, neginf=-100.0).clamp(-100.0, 100.0)
+
+
+def _drift_and_divergence(drift, x, t_tensor):
+    if hasattr(drift, "n_particles"):
+        return _finite_difference_drift_and_divergence(drift, x, t_tensor)
+
+    if not hasattr(drift, "n_particles") or x.shape[0] <= EGNN_DIVERGENCE_BATCH_SIZE:
+        b = drift(x, t_tensor)
+        return b, divergence(b, x)
+
+    drift_chunks = []
+    div_chunks = []
+    for start in range(0, x.shape[0], EGNN_DIVERGENCE_BATCH_SIZE):
+        stop = min(start + EGNN_DIVERGENCE_BATCH_SIZE, x.shape[0])
+        x_chunk = x[start:stop]
+        t_chunk = t_tensor[start:stop]
+        b_chunk = drift(x_chunk, t_chunk)
+        drift_chunks.append(b_chunk)
+        div_chunks.append(divergence(b_chunk, x_chunk))
+    return torch.cat(drift_chunks, dim=0), torch.cat(div_chunks, dim=0)
+
+
 def langevin_sampler(
     x0,
     A0,
@@ -91,10 +127,9 @@ def NET_Sampler(
         noise = torch.randn_like(x)
         t_tensor = torch.full((x.shape[0],), step * dt, device=device).requires_grad_(True)
 
-        b = drift(x, t_tensor)
+        b, div_b = _drift_and_divergence(drift, x, t_tensor)
         grad_U = grad_U_t(x, t_tensor, means, U_net, modes, mixture, prior, energy_model)
         dtU = partial_t_U(x, t_tensor, means, U_net, modes, mixture, prior, energy_model)
-        div_b = divergence(b, x)
         
         x = x - epsilon * grad_U * dt + b * dt + (2 * epsilon * dt) ** 0.5 * noise
         A = A + div_b * dt - dtU * dt - (b * grad_U).sum(dim=1) * dt 
