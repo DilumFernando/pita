@@ -188,7 +188,7 @@ class LearnableGMM(nn.Module):
         """
         component_dist = self.component_distribution
         component_log_probs = component_dist.log_prob(x[:, None, :])
-        mode_log_probs = component_dist.log_prob(self.means)
+        mode_log_probs = component_dist.log_prob(self.means) * 0
         log_weights = torch.log_softmax(self.logits, dim=0)
         log_density = torch.logsumexp(
             log_weights[None, :] + component_log_probs - mode_log_probs[None, :],
