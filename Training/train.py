@@ -15,6 +15,12 @@ DELTA_T = 0.1
 TRAIN_T_MAX = 1.0
 TRAIN_T_MIN = 0.05
 ESS_RESAMPLE_THRESHOLD = 0.3
+DRIFT_CLIP = 100.0
+
+
+def _clip_update_vector(value, clip=DRIFT_CLIP):
+    value = torch.nan_to_num(value, nan=0.0, posinf=clip, neginf=-clip)
+    return torch.clamp(value, min=-clip, max=clip)
 
 
 def interpolation_dir(kind, dim, num_components, run_name=None):
@@ -345,24 +351,27 @@ def _train_path(
     path_log_weights = [] if compute_ctds else None
 
     while t_k.mean() <= current_T:
-        b = drift_net(x, t_k)
+        b = _clip_update_vector(drift_net(x, t_k))
         gradU = grad_U_t(x, t_k, means, U_net, modes, mixture, prior, energy_model)
         div_b = divergence(b, x)
         dtU = partial_t_U(x, t_k, means, U_net, modes, mixture, prior, energy_model)
 
         noise = torch.randn_like(x)
         x_next = x - epsilon * gradU * delta_t + b * delta_t + ((2 * epsilon * delta_t) ** 0.5) * noise
+        x_next = torch.nan_to_num(x_next, nan=0.0, posinf=DRIFT_CLIP, neginf=-DRIFT_CLIP)
         A = A + div_b * delta_t - (b * gradU).sum(dim=1) * delta_t - dtU * delta_t
+        A = torch.nan_to_num(A, nan=0.0, posinf=DRIFT_CLIP, neginf=-DRIFT_CLIP)
 
         x_det = x.detach().requires_grad_(True)
         t_det = t_k.detach().requires_grad_(True)
-        b_eval = drift_net(x_det, t_det)
+        b_eval = _clip_update_vector(drift_net(x_det, t_det))
         gradU_eval = grad_U_t(x_det, t_det, means, U_net, modes, mixture, prior, energy_model)
         div_b_eval = divergence(b_eval, x_det)
         dtU_eval = partial_t_U(x_det, t_det, means, U_net, modes, mixture, prior, energy_model)
-        dF_dt = torch.autograd.grad(F_net(t_det).sum(), t_det, create_graph=True)[0]
+        dF_dt = _clip_update_vector(torch.autograd.grad(F_net(t_det).sum(), t_det, create_graph=True)[0])
 
         err = div_b_eval - (gradU_eval * b_eval).sum(dim=1) - dtU_eval + dF_dt
+        err = torch.nan_to_num(err, nan=0.0, posinf=DRIFT_CLIP, neginf=-DRIFT_CLIP)
         weights = torch.exp(A - A.max())
         loss = (weights * err.pow(2)).mean() / (weights.mean() + 1e-12)
 

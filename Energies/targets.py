@@ -315,7 +315,23 @@ class AlanineDipeptideTarget:
             )
 
         x = x.to(self.device)
+        if not torch.isfinite(x).all():
+            finite_mask = torch.isfinite(x)
+            bad_count = int((~finite_mask).sum().item())
+            finite_abs_max = float(x[finite_mask].abs().max().item()) if finite_mask.any() else float("nan")
+            raise ValueError(
+                "ALDP log_prob received non-finite normalized coordinates before OpenMM evaluation "
+                f"(bad_values={bad_count}, finite_abs_max={finite_abs_max:.4g})."
+            )
         x_phys = self._maybe_unnormalize(x)
+        if not torch.isfinite(x_phys).all():
+            finite_mask = torch.isfinite(x_phys)
+            bad_count = int((~finite_mask).sum().item())
+            finite_abs_max = float(x_phys[finite_mask].abs().max().item()) if finite_mask.any() else float("nan")
+            raise ValueError(
+                "ALDP log_prob produced non-finite physical coordinates before OpenMM evaluation "
+                f"(bad_values={bad_count}, finite_abs_max={finite_abs_max:.4g})."
+            )
         log_probs = []
         for batch in torch.split(x_phys, self.energy_batch_size, dim=0):
             log_probs.append(-self._openmm_energy.energy(batch).squeeze(-1))

@@ -7,6 +7,12 @@ ENERGY_DERIVATIVE_CLIP = 100.0
 
 
 def _clip_energy_derivative(value):
+    value = torch.nan_to_num(
+        value,
+        nan=0.0,
+        posinf=ENERGY_DERIVATIVE_CLIP,
+        neginf=-ENERGY_DERIVATIVE_CLIP,
+    )
     return torch.clamp(value, min=-ENERGY_DERIVATIVE_CLIP, max=ENERGY_DERIVATIVE_CLIP)
 
 
