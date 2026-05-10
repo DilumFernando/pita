@@ -6,6 +6,13 @@ import numpy as np
 from Utils.misc import mode_weights_from_particles, p_t, normalize_weights
 
 
+def _weighted_center(values, weights):
+    total_weight = np.sum(weights)
+    if np.isfinite(total_weight) and total_weight > 0:
+        return np.average(values, weights=weights)
+    return np.mean(values)
+
+
 def _resolve_plot_dir(output_dir):
     if os.path.basename(os.path.normpath(output_dir)) == "plots":
         plot_dir = output_dir
@@ -650,8 +657,8 @@ def plot_weighted_samples(generated_samples, true_samples, weights, labels, labe
 
         mode_weight = w[idx].sum()
 
-        center_x = np.average(X_plot[idx, 0], weights=w[idx])
-        center_y = 0.0 if generated_is_1d else np.average(X_plot[idx, 1], weights=w[idx])
+        center_x = _weighted_center(X_plot[idx, 0], w[idx])
+        center_y = 0.0 if generated_is_1d else _weighted_center(X_plot[idx, 1], w[idx])
 
         ax.text(
             center_x,
@@ -770,8 +777,8 @@ def save_weighted_samples_plot(
         ax.scatter(X_plot[idx, 0], y_vals, s=20, alpha=0.7, label=f"Mode {k}")
 
         mode_weight = w[idx].sum()
-        center_x = np.average(X_plot[idx, 0], weights=w[idx])
-        center_y = 0.0 if generated_is_1d else np.average(X_plot[idx, 1], weights=w[idx])
+        center_x = _weighted_center(X_plot[idx, 0], w[idx])
+        center_y = 0.0 if generated_is_1d else _weighted_center(X_plot[idx, 1], w[idx])
         ax.text(
             center_x,
             center_y,

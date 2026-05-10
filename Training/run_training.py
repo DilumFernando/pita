@@ -26,7 +26,7 @@ from Energies.gmm import (
     make_scaled_identity_covariances,
 )
 from Energies.targets import create_target_from_config, infer_mode_centers, sample_reference
-from Models.models import LogitsNet, PotentialNet
+from Models.models import LogitsNet
 from Samplers.sampling import prior_samples as sample_prior_from_modes
 from Training.train import train_and_save
 from Utils.constants import means_40
@@ -149,7 +149,6 @@ def _build_training_state(cfg, target, device):
         if true_modes is None:
             raise ValueError("Learned mean interpolation requires target modes/means.")
         means = true_modes
-        U_net = PotentialNet(dim).to(device)
         prior_state = sample_prior_from_modes(means, num_samples=n_walkers, device=device)
     elif interpolation_kind == "alps":
         if true_modes is None:
@@ -207,6 +206,29 @@ def _build_training_state(cfg, target, device):
     }
 
 
+def _model_type_and_kwargs(cfg):
+    model_cfg = cfg.get("model", {})
+    model_type = str(model_cfg.get("model_type", model_cfg.get("network_type", "mlp"))).lower()
+    egnn_cfg = model_cfg.get("egnn", {})
+    kwargs = {}
+    if model_type == "egnn":
+        if "n_particles" in cfg.data:
+            kwargs["n_particles"] = int(cfg.data.n_particles)
+        if "spatial_dim" in cfg.data:
+            kwargs["spatial_dim"] = int(cfg.data.spatial_dim)
+        for cfg_key, kwarg_key in (
+            ("hidden_dim", "hidden_dim"),
+            ("hidden_nf", "hidden_dim"),
+            ("n_layers", "n_layers"),
+            ("layers", "n_layers"),
+            ("remove_mean", "remove_mean"),
+        ):
+            if cfg_key in egnn_cfg:
+                value = egnn_cfg[cfg_key]
+                kwargs[kwarg_key] = bool(value) if kwarg_key == "remove_mean" else int(value)
+    return model_type, kwargs
+
+
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
 def main(cfg):
     device = _resolve_device(cfg.device)
@@ -220,6 +242,7 @@ def main(cfg):
     if target is None:
         target = _build_mixture(cfg, device)
     state = _build_training_state(cfg, target, device)
+    model_type, model_kwargs = _model_type_and_kwargs(cfg)
 
     train_and_save(
         dim=cfg.data.dim,
@@ -243,6 +266,8 @@ def main(cfg):
         true_samples=state["true_samples"],
         interpolation_kind=cfg.model.interpolation_kind,
         run_name=str(cfg.data.get("run_name", "")) or None,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
     )
 
 

@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from Energies.targets import create_target_from_config
 from Testing.run_eval import run_evaluation, save_projection_scatter_plots
-from Training.run_training import _build_mixture, _build_training_state, _resolve_device
+from Training.run_training import _build_mixture, _build_training_state, _model_type_and_kwargs, _resolve_device
 from Training.train import train_and_save
 from Utils.aldp_tica import plot_tica_comparison
 
@@ -68,6 +68,9 @@ def _parse_args():
     parser.add_argument("--modal-loss-weight", type=float, default=0.0)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.0)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])
+    parser.add_argument("--model-type", default="mlp", choices=["mlp", "egnn"])
+    parser.add_argument("--egnn-hidden-dim", type=int, default=64)
+    parser.add_argument("--egnn-layers", type=int, default=4)
     parser.add_argument("--eval-num-samples", type=int, default=512)
     parser.add_argument("--eval-true-sample-count", type=int, default=512)
     parser.add_argument("--eval-dt", type=float, default=0.01)
@@ -144,10 +147,16 @@ def _base_config(args):
             },
             "model": {
                 "interpolation_kind": "alps",
+                "model_type": str(args.model_type),
                 "beta_max": float(args.beta_max),
                 "beta_max_learnable": bool(args.beta_max_learnable),
                 "perturbation": 0.0,
                 "use_time_logits": False,
+                "egnn": {
+                    "hidden_dim": int(args.egnn_hidden_dim),
+                    "n_layers": int(args.egnn_layers),
+                    "remove_mean": True,
+                },
             },
             "eval": {
                 "sampler": "nets",
@@ -171,6 +180,7 @@ def _train_once(cfg):
     if target is None:
         target = _build_mixture(cfg, device)
     state = _build_training_state(cfg, target, device)
+    model_type, model_kwargs = _model_type_and_kwargs(cfg)
 
     train_and_save(
         dim=cfg.data.dim,
@@ -194,6 +204,8 @@ def _train_once(cfg):
         true_samples=state["true_samples"],
         interpolation_kind=cfg.model.interpolation_kind,
         run_name=str(cfg.data.get("run_name", "")) or None,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
     )
 
 
@@ -285,7 +297,10 @@ def main():
     dimension_pairs = _parse_dimension_pairs(args.dimension_pairs)
     base_cfg = _base_config(args)
 
-    sweep_dir = PROJECT_ROOT / "alps_interpolation" / args.sweep_name
+    sweep_name = args.sweep_name
+    if args.model_type != "mlp" and sweep_name == "aldp_alps_multiseed":
+        sweep_name = f"{sweep_name}_{args.model_type}"
+    sweep_dir = PROJECT_ROOT / "alps_interpolation" / sweep_name
     summary_dir = sweep_dir / "summary"
     summary_dir.mkdir(parents=True, exist_ok=True)
 
@@ -299,6 +314,8 @@ def main():
     all_rows = []
     for seed in args.seeds:
         run_name = f"aldp_alps_seed_{seed}"
+        if args.model_type != "mlp":
+            run_name = f"{run_name}_{args.model_type}"
         cfg = OmegaConf.create(OmegaConf.to_container(base_cfg, resolve=True))
         cfg.seed = int(seed)
         cfg.data.run_name = run_name

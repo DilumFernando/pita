@@ -35,7 +35,12 @@ data:
 
 model:
   interpolation_kind: alps
+  model_type: mlp
   beta_max: 1.0
   beta_max_learnable: false
   perturbation: 0.0
   use_time_logits: false
+  egnn:
+    hidden_dim: 64
+    n_layers: 4
+    remove_mean: true

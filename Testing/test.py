@@ -3,7 +3,7 @@ import torch
 
 from Energies.gmm import LearnableGMM, GMMModesEnergyTimeLogits, create_gaussian_mixture
 from Energies.targets import infer_mode_centers, load_target_from_metadata
-from Models.models import DriftNet, FreeEnergyNet, LogitsNet, PotentialNet
+from Models.models import LogitsNet, build_model_bundle
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -52,6 +52,23 @@ def _load_mixture(mixture_path, device):
     return target_gpu, target_cpu
 
 
+def _load_architecture(checkpoint_dir, fallback_dir, device, model_type=None, model_kwargs=None):
+    if model_type is not None:
+        return str(model_type).lower(), dict(model_kwargs or {})
+
+    for path in (
+        os.path.join(checkpoint_dir, "architecture.pth"),
+        os.path.join(fallback_dir, "architecture.pth"),
+    ):
+        if os.path.exists(path):
+            architecture = torch.load(path, map_location=device, weights_only=False)
+            return (
+                str(architecture.get("model_type", "mlp")).lower(),
+                dict(architecture.get("model_kwargs", {}) or {}),
+            )
+    return "mlp", {}
+
+
 def load_model(
     dim,
     num_components,
@@ -63,15 +80,27 @@ def load_model(
     interpolation_kind=None,
     checkpoint_name="final",
     run_name=None,
+    model_type=None,
+    model_kwargs=None,
 ):
     del beta_max
 
     kind = _infer_interpolation_kind(interpolation_kind, means, U_net, modes)
     checkpoint_dir, dirs = _resolve_checkpoint_dir(kind, dim, num_components, checkpoint_name, run_name=run_name)
 
-    drift = DriftNet(dim).to(device)
-    free_energy = FreeEnergyNet(dim).to(device)
-    potential_net = PotentialNet(dim).to(device)
+    resolved_model_type, resolved_model_kwargs = _load_architecture(
+        checkpoint_dir,
+        dirs["models"],
+        device,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
+    )
+    drift, free_energy, potential_net = build_model_bundle(
+        dim,
+        device,
+        model_type=resolved_model_type,
+        model_kwargs=resolved_model_kwargs,
+    )
     energy_model = None
     prior = None
     true_modes = None

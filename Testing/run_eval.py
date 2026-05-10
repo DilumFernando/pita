@@ -23,6 +23,7 @@ from Samplers.sampling import NET_Sampler, langevin_sampler, prior_samples as sa
 from Energies.interpolations import energy_components
 from Energies.targets import sample_reference
 from Testing.test import artifact_dirs, load_model
+from Training.run_training import _model_type_and_kwargs
 from Utils.metrics import mmd_rbf, unweighted_w2_from_samples, weighted_w2
 from Utils.misc import label_assignment_hard, mode_weights_from_particles
 from Utils.plotting import plot_path_metrics, save_weighted_samples_plot
@@ -312,6 +313,8 @@ def run_evaluation(cfg):
     marker_means = torch.zeros(1) if interpolation_kind == "mean" else None
     marker_u_net = object() if interpolation_kind == "learned" else None
     marker_modes = torch.zeros(1) if interpolation_kind == "alps" else None
+    has_model_type = "model_type" in cfg.model or "network_type" in cfg.model
+    model_type, model_kwargs = _model_type_and_kwargs(cfg) if has_model_type else (None, None)
 
     (
         drift,
@@ -335,6 +338,8 @@ def run_evaluation(cfg):
         interpolation_kind=interpolation_kind,
         checkpoint_name=checkpoint_name,
         run_name=str(cfg.data.get("run_name", "")) or None,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
     )
 
     true_sample_count = int(

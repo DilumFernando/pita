@@ -5,7 +5,7 @@ import torch
 
 from Energies.interpolations import divergence, grad_U_t, partial_t_U
 from Energies.targets import target_payload
-from Models.models import DriftNet, FreeEnergyNet, PotentialNet
+from Models.models import build_model_bundle
 from Utils.metrics import mmd_rbf, unweighted_w2_from_samples, weighted_w2, ess_from_weights
 from Utils.misc import soft_mode_weights_from_particles
 from Utils.plotting import plot_training_metrics, plot_walkers
@@ -92,6 +92,8 @@ def _hyperparameter_summary(
     loss_type,
     modal_loss_end_fraction,
     energy_model=None,
+    model_type="mlp",
+    model_kwargs=None,
 ):
     return {
         "dim": dim,
@@ -106,10 +108,24 @@ def _hyperparameter_summary(
         "loss_type": loss_type,
         "modal_loss_end_fraction": modal_loss_end_fraction,
         "beta_max_learnable": _energy_model_beta_max_learnable(energy_model),
+        "model_type": model_type,
+        "model_kwargs": dict(model_kwargs or {}),
     }
 
 
-def _save_training_checkpoint(checkpoint_dir, drift_net, F_net, U_net, energy_model, prior, mixture, step, metrics):
+def _save_training_checkpoint(
+    checkpoint_dir,
+    drift_net,
+    F_net,
+    U_net,
+    energy_model,
+    prior,
+    mixture,
+    step,
+    metrics,
+    model_type="mlp",
+    model_kwargs=None,
+):
     os.makedirs(checkpoint_dir, exist_ok=True)
     _sync_alps_prior_with_energy_model(prior, energy_model)
 
@@ -124,6 +140,10 @@ def _save_training_checkpoint(checkpoint_dir, drift_net, F_net, U_net, energy_mo
 
     torch.save(target_payload(mixture), os.path.join(checkpoint_dir, "mixture.pth"))
     torch.save({"step": step, "metrics": dict(metrics)}, os.path.join(checkpoint_dir, "metadata.pth"))
+    torch.save(
+        {"model_type": str(model_type or "mlp").lower(), "model_kwargs": dict(model_kwargs or {})},
+        os.path.join(checkpoint_dir, "architecture.pth"),
+    )
 
 
 def _current_training_horizon(step, steps, gamma=1.0):
@@ -502,18 +522,25 @@ def _configure_models_and_optimizer(
     U_net,
     energy_model,
     num_components,
+    model_type="mlp",
+    model_kwargs=None,
 ):
     del num_components
 
-    drift_net = DriftNet(dim).to(device)
-    F_net = FreeEnergyNet(dim).to(device)
+    model_kwargs = dict(model_kwargs or {})
+    drift_net, F_net, default_potential_net = build_model_bundle(
+        dim,
+        device,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
+    )
     potential_net = U_net.to(device) if U_net is not None else None
     energy_model = energy_model.to(device) if energy_model is not None else None
     scheduler = None
 
     if interpolation_kind == "learned":
         if potential_net is None:
-            potential_net = PotentialNet(dim).to(device)
+            potential_net = default_potential_net
         optimizer = torch.optim.Adam(
             list(drift_net.parameters()) + list(F_net.parameters()) + list(potential_net.parameters()),
             lr=1e-4,
@@ -525,7 +552,7 @@ def _configure_models_and_optimizer(
     elif interpolation_kind == "alps":
         lr = 1e-3
         if potential_net is None:
-            potential_net = PotentialNet(dim).to(device)
+            potential_net = default_potential_net
         if energy_model is None:
             raise ValueError("ALPS interpolation requires an energy_model with learnable parameters.")
         energy_model_params = _trainable_parameters(energy_model)
@@ -539,7 +566,7 @@ def _configure_models_and_optimizer(
         )
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
         beta_max_status = "learnable" if _energy_model_beta_max_learnable(energy_model) else "fixed"
-        print(f"using the alps interpolation with {beta_max_status} beta_max")
+        print(f"using the alps interpolation with {beta_max_status} beta_max and {model_type} nets")
     else:
         optimizer = torch.optim.Adam(list(drift_net.parameters()) + list(F_net.parameters()), lr=1e-4)
         print("using the fixed interpolation")
@@ -653,13 +680,38 @@ def _update_step_metrics(
     return step_metrics
 
 
-def _maybe_save_best_checkpoint(best_weighted_w2, step_metrics, best_models_dir, drift_net, F_net, U_net, energy_model, prior, mixture, step):
+def _maybe_save_best_checkpoint(
+    best_weighted_w2,
+    step_metrics,
+    best_models_dir,
+    drift_net,
+    F_net,
+    U_net,
+    energy_model,
+    prior,
+    mixture,
+    step,
+    model_type="mlp",
+    model_kwargs=None,
+):
     current_weighted_w2 = step_metrics["weighted_w2"]
     best_checkpoint_summary = {}
     if current_weighted_w2 == current_weighted_w2 and current_weighted_w2 < best_weighted_w2:
         best_weighted_w2 = current_weighted_w2
         weighted_w2_dir = os.path.join(best_models_dir, "best_weighted_w2")
-        _save_training_checkpoint(weighted_w2_dir, drift_net, F_net, U_net, energy_model, prior, mixture, step, step_metrics)
+        _save_training_checkpoint(
+            weighted_w2_dir,
+            drift_net,
+            F_net,
+            U_net,
+            energy_model,
+            prior,
+            mixture,
+            step,
+            step_metrics,
+            model_type=model_type,
+            model_kwargs=model_kwargs,
+        )
         best_checkpoint_summary["best_weighted_w2"] = {
             "step": step,
             "weighted_w2": best_weighted_w2,
@@ -756,8 +808,12 @@ def train_and_save(
     true_samples=None,
     interpolation_kind=None,
     run_name=None,
+    model_type="mlp",
+    model_kwargs=None,
 ):
     interpolation_kind = _resolve_interpolation_kind(interpolation_kind, means, modes, U_net)
+    model_type = str(model_type or "mlp").lower()
+    model_kwargs = dict(model_kwargs or {})
     dirs = _initialize_run_dirs(interpolation_kind, dim, num_components, run_name=run_name)
     drift_net, F_net, U_net, energy_model, optimizer, scheduler = _configure_models_and_optimizer(
         dim=dim,
@@ -766,6 +822,8 @@ def train_and_save(
         U_net=U_net,
         energy_model=energy_model,
         num_components=num_components,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
     )
 
     hyperparams = _hyperparameter_summary(
@@ -780,6 +838,8 @@ def train_and_save(
         loss_type,
         modal_loss_end_fraction,
         energy_model,
+        model_type,
+        model_kwargs,
     )
     logging_paths = _initialize_logging(dirs["metrics"], num_components, hyperparams)
     metrics_history = []
@@ -842,6 +902,8 @@ def train_and_save(
             prior,
             mixture,
             step,
+            model_type,
+            model_kwargs,
         )
         if maybe_summary:
             best_checkpoint_summary.update(maybe_summary)
@@ -871,3 +933,7 @@ def train_and_save(
     torch.save(target_payload(mixture), final_paths["mixture"])
     if prior is not None:
         torch.save(prior, final_paths["prior"])
+    torch.save(
+        {"model_type": model_type, "model_kwargs": model_kwargs},
+        os.path.join(dirs["models"], "architecture.pth"),
+    )
