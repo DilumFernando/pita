@@ -344,12 +344,17 @@ class EGNNFreeEnergyNet(FreeEnergyNet):
 
 def build_model_bundle(dim, device, model_type="mlp", model_kwargs=None):
     model_kwargs = dict(model_kwargs or {})
-    model_type = str(model_type or "mlp").lower()
+    model_type = str(model_type or "mlp").lower().replace("-", "_")
     if model_type == "mlp":
         return DriftNet(dim).to(device), FreeEnergyNet(dim).to(device), PotentialNet(dim).to(device)
     if model_type == "egnn":
         drift = EGNNDriftNet(dim, **model_kwargs).to(device)
         free_energy = EGNNFreeEnergyNet(dim).to(device)
         potential = EGNNEnergyNet(dim, **model_kwargs).to(device)
+        return drift, free_energy, potential
+    if model_type in {"egnn_drift", "hybrid_egnn_drift"}:
+        drift = EGNNDriftNet(dim, **model_kwargs).to(device)
+        free_energy = FreeEnergyNet(dim).to(device)
+        potential = PotentialNet(dim).to(device)
         return drift, free_energy, potential
     raise ValueError(f"Unsupported model_type: {model_type}")

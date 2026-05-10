@@ -909,9 +909,10 @@ def train_and_save(
     best_checkpoint_summary = {}
 
     for step in range(steps):
-        backward_per_step = model_type == "egnn" and loss_type == "manual"
-        divergence_batch_size = EGNN_DIVERGENCE_BATCH_SIZE if model_type == "egnn" else None
-        finite_difference_divergence = model_type == "egnn"
+        drift_is_egnn = hasattr(drift_net, "n_particles")
+        backward_per_step = drift_is_egnn and loss_type == "manual"
+        divergence_batch_size = EGNN_DIVERGENCE_BATCH_SIZE if drift_is_egnn else None
+        finite_difference_divergence = drift_is_egnn
         loss, weights, samples, step_metrics, did_backward = train_step(
             drift_net=drift_net,
             F_net=F_net,

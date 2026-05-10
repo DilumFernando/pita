@@ -68,7 +68,7 @@ def _parse_args():
     parser.add_argument("--modal-loss-weight", type=float, default=0.0)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.0)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])
-    parser.add_argument("--model-type", default="mlp", choices=["mlp", "egnn"])
+    parser.add_argument("--model-type", default="mlp", choices=["mlp", "egnn", "egnn-drift"])
     parser.add_argument("--egnn-hidden-dim", type=int, default=64)
     parser.add_argument("--egnn-layers", type=int, default=4)
     parser.add_argument("--eval-num-samples", type=int, default=512)

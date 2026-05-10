@@ -208,10 +208,10 @@ def _build_training_state(cfg, target, device):
 
 def _model_type_and_kwargs(cfg):
     model_cfg = cfg.get("model", {})
-    model_type = str(model_cfg.get("model_type", model_cfg.get("network_type", "mlp"))).lower()
+    model_type = str(model_cfg.get("model_type", model_cfg.get("network_type", "mlp"))).lower().replace("-", "_")
     egnn_cfg = model_cfg.get("egnn", {})
     kwargs = {}
-    if model_type == "egnn":
+    if model_type in {"egnn", "egnn_drift", "hybrid_egnn_drift"}:
         if "n_particles" in cfg.data:
             kwargs["n_particles"] = int(cfg.data.n_particles)
         if "spatial_dim" in cfg.data:
