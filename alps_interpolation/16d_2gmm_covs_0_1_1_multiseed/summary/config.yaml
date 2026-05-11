@@ -1,0 +1,49 @@
+seed: 1
+device: auto
+training:
+  n_walkers: 1000
+  steps: 50
+  epsilon: 5.0
+  K: 50
+  modal_loss_weight: 100000.0
+  modal_loss_end_fraction: 0.4
+  loss_type: manual
+data:
+  target: gmm
+  dim: 16
+  num_components: 2
+  covs: null
+  weights:
+  - 0.3
+  - 0.7
+  means_source: null
+  apply_mean_layout: true
+  mean_layout: pair_shift
+  layout_scale: 10.0
+  perturb_mean: 10.0
+  true_sample_count: 2000
+  run_name: ''
+  covariance:
+    style: scaled_identity
+    scales:
+    - 0.1
+    - 1.0
+    diagonal_scales: null
+    random_rotation_per_component: true
+model:
+  interpolation_kind: alps
+  perturbation: 0.0
+  use_time_logits: false
+eval:
+  sampler: nets
+  checkpoint_name: final
+  num_samples: 2000
+  true_sample_count: 2000
+  dt: 0.01
+  steps: 100
+  epsilon: 5.0
+  plot_every: 0
+seeds: [1]
+samplers: ['nets']
+dimension_pairs: [(0, 1), (2, 3), (4, 5), (6, 7)]
+ctds_root: None

@@ -1,0 +1,57 @@
+seed: 1
+device: auto
+training:
+  n_walkers: 100
+  steps: 50
+  epsilon: 10.0
+  K: 1000
+  modal_loss_weight: 0.0
+  modal_loss_end_fraction: 0.8
+  loss_type: ctds
+data:
+  target: aldp
+  run_name: ''
+  dim: 66
+  num_components: 6
+  n_particles: 22
+  spatial_dim: 3
+  temperature: 300.0
+  should_normalize: true
+  normalization_factor: 0.164
+  should_remove_mean: true
+  train_path: data/alanine/AL22_temp_300.00/train_split_AL22-10000.npy
+  val_path: data/alanine/AL22_temp_300.00/val_split_AL22-10000.npy
+  test_path: data/alanine/AL22_temp_300.00/test_split_AL22-10000.npy
+  pdb_path: data/pdbs/A_capped.pdb
+  mode_centers_path: null
+  num_mode_centers: 6
+  mode_estimation_samples: 10000
+  mode_strategy: canonical_rama
+  energy_batch_size: 1024
+  openmm_platform: CPU
+  device_index: 0
+  true_sample_count: 512
+model:
+  interpolation_kind: alps
+  model_type: egnn
+  beta_max: 1.0
+  beta_max_learnable: false
+  perturbation: 0.0
+  use_time_logits: false
+  egnn:
+    hidden_dim: 64
+    n_layers: 3
+    remove_mean: true
+eval:
+  sampler: nets
+  checkpoint_name: final
+  num_samples: 512
+  true_sample_count: 512
+  dt: 0.01
+  steps: 100
+  epsilon: 5.0
+  plot_every: 0
+seeds: [1]
+samplers: ['nets']
+dimension_pairs: [(0, 1), (2, 3), (4, 5), (6, 7)]
+make_tica: False

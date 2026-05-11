@@ -124,7 +124,7 @@ def _base_config(args):
                 "run_name": "",
                 "covariance": {
                     "style": "scaled_identity",
-                    "scales": [1.0, 3.0],
+                    "scales": [0.1, 1.0],
                     "diagonal_scales": None,
                     "random_rotation_per_component": True,
                 },
@@ -363,7 +363,7 @@ def main():
 
     all_rows = []
     for seed in args.seeds:
-        run_name = f"16d_2gmm_covs_1_3_seed_{seed}{balance_suffix}"
+        run_name = f"16d_2gmm_covs_0_1_1_seed_{seed}{balance_suffix}"
         cfg = OmegaConf.create(OmegaConf.to_container(base_cfg, resolve=True))
         cfg.seed = int(seed)
         cfg.data.run_name = run_name
