@@ -326,49 +326,6 @@ class GMMModesEnergyTimeLogits(nn.Module):
         U = -log_q
         return U
 
-# class GMMModesEnergyTimeLogits(nn.Module):
-#     def __init__(self, modes: torch.Tensor, beta_max: float, logits_net: nn.Module, log_w: None):
-#         super().__init__()
-#         self.register_buffer("modes", modes)   # [C,D]
-#         self.logits_net = logits_net           # outputs [N,C]
-#         self.beta_max = float(beta_max)
-#         self.log_w = log_w
-
-#     def forward(self, x: torch.Tensor, t: torch.Tensor):
-#         """
-#         Returns:
-#           U_gmm(x,t) = -log sum_k softmax(logits_net(t))_k * exp(-0.5*beta(t)*||x-mu_k||^2)
-#           beta: [N]
-#         """
-#         device = x.device
-#         N, D = x.shape
-#         C = self.modes.shape[0]
-
-#         # beta(t)
-#         beta = beta_schedule(t, beta_max=self.beta_max).to(device=device, dtype=x.dtype).view(-1)
-#         if beta.numel() == 1:
-#             beta = beta.expand(N)  # [N]
-        
-#         # logits_t should be [C]
-#         # t_in = t.to(device=device, dtype=t.dtype)
-#         logits_t = self.logits_net(t)
-
-#         # if logits_t.ndim != 1 or logits_t.shape[0] != C:
-#         #     raise ValueError(f"logits_net(t) should return shape [{C}], got {tuple(logits_t.shape)}")
-
-#         self.log_w = F.log_softmax(logits_t, dim=0)   # [N, C]
-
-#         # quadratic term
-#         means_ = self.modes[None, :, :]                          # [1,C,D]
-#         diff2 = (x[:, None, :] - means_).pow(2).sum(dim=-1)      # [N,C]
-#         energy = 0.5 * beta[:, None] * diff2                       # [N,C]
-
-#         # log q_t(x)
-#         log_q = torch.logsumexp(self.log_w - energy, dim=1)             # [N]
-#         U = -log_q                                               # [N]
-#         return U
-
-
 def create_gaussian_mixture(dimension: int, 
                             num_components: int, 
                             *,

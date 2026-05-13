@@ -1,13 +1,13 @@
-seed: 40
+seed: 300
 device: auto
 training:
   n_walkers: 1000
   steps: 50
   epsilon: 4.0
-  K: 50
+  K: 20
   modal_loss_weight: 0.0
-  modal_loss_end_fraction: 0.95
-  loss_type: manual
+  modal_loss_end_fraction: 0.4
+  loss_type: ctds
 data:
   target: gmm
   dim: 16
@@ -21,30 +21,31 @@ data:
   mean_layout: pair_shift
   layout_scale: 10.0
   perturb_mean: 10.0
-  true_sample_count: 512
+  true_sample_count: 2000
   run_name: ''
   covariance:
     style: scaled_identity
     scales:
+    - 0.1
     - 1.0
-    - 3.0
     diagonal_scales: null
     random_rotation_per_component: true
 model:
   interpolation_kind: alps
-  beta_max: 1.0
+  beta_max: 2.0
+  beta_max_learnable: true
   perturbation: 0.0
   use_time_logits: false
 eval:
   sampler: nets
   checkpoint_name: final
-  num_samples: 512
-  true_sample_count: 512
-  dt: 0.02
+  num_samples: 2000
+  true_sample_count: 2000
+  dt: 0.01
   steps: 100
-  epsilon: 1.0
+  epsilon: 10.0
   plot_every: 0
-seeds: [40, 41, 42]
+seeds: [300]
 samplers: ['nets']
 dimension_pairs: [(0, 1), (2, 3), (4, 5), (6, 7)]
 ctds_root: None

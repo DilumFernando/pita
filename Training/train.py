@@ -11,7 +11,6 @@ from Utils.misc import soft_mode_weights_from_particles
 from Utils.plotting import plot_training_metrics, plot_walkers
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DELTA_T = 0.1
 TRAIN_T_MAX = 1.0
 TRAIN_T_MIN = 0.05
 ESS_RESAMPLE_THRESHOLD = 0.3

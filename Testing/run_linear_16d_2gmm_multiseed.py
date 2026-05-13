@@ -50,6 +50,7 @@ def _parse_args():
     parser.add_argument("--train-steps", type=int, default=50)
     parser.add_argument("--epsilon", type=float, default=4.0)
     parser.add_argument("--K", type=int, default=50)
+    parser.add_argument("--beta-max", type=float, default=1.0)
     parser.add_argument("--modal-loss-weight", type=float, default=1e5)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.4)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])
@@ -131,7 +132,7 @@ def _base_config(args):
             },
             "model": {
                 "interpolation_kind": "fixed",
-                "beta_max": 1.0,
+                "beta_max": float(args.beta_max),
                 "perturbation": 0.0,
                 "use_time_logits": False,
             },

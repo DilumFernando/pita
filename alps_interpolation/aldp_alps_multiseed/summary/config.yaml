@@ -1,13 +1,13 @@
-seed: 3
+seed: 1
 device: auto
 training:
-  n_walkers: 512
+  n_walkers: 100
   steps: 50
-  epsilon: 5.0
+  epsilon: 10.0
   K: 1000
   modal_loss_weight: 0.0
   modal_loss_end_fraction: 0.0
-  loss_type: manual
+  loss_type: ctds
 data:
   target: aldp
   run_name: ''
@@ -30,11 +30,11 @@ data:
   energy_batch_size: 1024
   openmm_platform: CPU
   device_index: 0
-  true_sample_count: 2000
+  true_sample_count: 512
 model:
   interpolation_kind: alps
   model_type: mlp
-  beta_max: 50.0
+  beta_max: 1.0
   beta_max_learnable: false
   perturbation: 0.0
   use_time_logits: false
@@ -45,13 +45,13 @@ model:
 eval:
   sampler: nets
   checkpoint_name: final
-  num_samples: 2000
-  true_sample_count: 2000
+  num_samples: 512
+  true_sample_count: 512
   dt: 0.01
   steps: 100
   epsilon: 5.0
   plot_every: 0
-seeds: [3]
+seeds: [1]
 samplers: ['nets']
 dimension_pairs: [(0, 1), (2, 3), (4, 5), (6, 7)]
 make_tica: False

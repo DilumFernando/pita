@@ -50,6 +50,21 @@ def _parse_args():
     parser.add_argument("--train-steps", type=int, default=50)
     parser.add_argument("--epsilon", type=float, default=4.0)
     parser.add_argument("--K", type=int, default=50)
+    parser.add_argument("--beta-max", type=float, default=1.0)
+    beta_max_group = parser.add_mutually_exclusive_group()
+    beta_max_group.add_argument(
+        "--beta-max-learnable",
+        dest="beta_max_learnable",
+        action="store_true",
+        help="Train beta_max as a learnable ALPS energy parameter.",
+    )
+    beta_max_group.add_argument(
+        "--fixed-beta-max",
+        dest="beta_max_learnable",
+        action="store_false",
+        help="Keep beta_max fixed at --beta-max during training.",
+    )
+    parser.set_defaults(beta_max_learnable=False)
     parser.add_argument("--modal-loss-weight", type=float, default=1e5)
     parser.add_argument("--modal-loss-end-fraction", type=float, default=0.4)
     parser.add_argument("--loss-type", default="manual", choices=["manual", "ctds"])
@@ -131,6 +146,8 @@ def _base_config(args):
             },
             "model": {
                 "interpolation_kind": "alps",
+                "beta_max": float(args.beta_max),
+                "beta_max_learnable": bool(args.beta_max_learnable),
                 "perturbation": 0.0,
                 "use_time_logits": False,
             },

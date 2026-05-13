@@ -1,0 +1,14 @@
+dim: 16
+num_components: 2
+n_walkers: 1000
+steps: 50
+epsilon: 4.0
+K: 50
+delta_t: 0.02
+interpolation: alps
+modal_loss_weight: 0.0
+loss_type: ctds
+modal_loss_end_fraction: 0.4
+beta_max_learnable: False
+model_type: mlp
+model_kwargs: {}
